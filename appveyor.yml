@@ -1,1 +1,34 @@
+rsion: '{build}'
 
+image: Visual Studio 2017
+
+install:
+ - ps: | # Set env vars for versioning
+    
+    
+    
+ - git submodule update --init --recursive
+ - gen.bat
+
+# Set target platform
+platform: x64 
+
+# Set solution configuration
+configuration: Release 
+ 
+build:
+  parallel: true
+  project: build-windows/Vios.sln
+  verbosity: normal
+  
+after_build:
+ - ps: | # Package artifact
+    7z a -m0=LZMA2 -mx9 $env:BUILD .\build-windows\bin\Release\*
+test: off
+
+artifacts:
+ - path: $(BUILD)
+   name: Vios
+
+on_finish:
+- ps: | # Bump AppVeyor Version
