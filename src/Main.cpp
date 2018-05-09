@@ -65,9 +65,9 @@ int main(int argc, char** argv) {
 	HLE::RegisterSceSysmem();
 	HLE::RegisterSceThreadmgr();
 
-	LoadFile("tests/vitahelloworld/vitahelloworld.velf", elfData);
+	LoadFile("tests/hello-world/bin/hello-world.elf", elfData);
 	ElfInfo elfInfo(&elfData[0], elfData.size());
-	LoadElf(elfInfo, program);
+	LoadArmElf(elfInfo, program);
 
 	uint32_t spc = 0xDEADBEEF;
 
@@ -79,7 +79,7 @@ int main(int argc, char** argv) {
 
 		// Execute an arbitrarily large number of instructions. No
 		// guarantee that all will execute
-		if (!arm->Execute(10000)) {
+		if (!arm->Execute(1)) {
 			abort();
 		}
 		arm->HaltExecution();

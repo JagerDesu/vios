@@ -66,57 +66,66 @@ static void HandleRelocations(ElfInfo& elfInfo, const std::vector<Relocation>& r
 	}
 }
 
-static void MapProgramSegment(ElfInfo& elfInfo, HLE::Program& program) {
+static void MapProgramSegments(ElfInfo& elfInfo, HLE::Program& program, uint32_t baseAddress) {
 	const char* name = nullptr;
 	HLE::Segment* segment = nullptr;
-	Memory::Protection protection;
-	const uint32_t flags = p.p_flags & (PF_R | PF_W | PF_X);
-	
-	if (flags == (PF_R | PF_X)) {
-		segment = &program.text;
-		name = ".text";
-		protection = Memory::Protection::ReadExecute;
-	}
-	else if (flags == (PF_R)) {
-		segment = &program.rodata;
-		name = ".rodata";
-		protection = Memory::Protection::Read;
-	}
-	else if (flags == (PF_R | PF_W)) {
-		segment = &program.data;
-		name = ".data";
-		protection = Memory::Protection::ReadWrite;
-	}
-	else {
-		LOG_ERROR(
-			Loader,
-			"Unexpected ELF PT_LOAD segment id %u with flags %X",
-			(unsigned int)i,
-			p.p_flags
-		);
-		continue;
-	}
+	uint32_t currentImageOffset = 0;
 
-	const uint32_t segmentAddress = BaseAddress + p.p_vaddr;
-	const uint32_t alignedSize = (p.p_memsz + 0xFFF) & ~0xFFF;
+	for(size_t i = 0; i < elfInfo.NumSegments(); i++) {
+		auto& p = elfInfo.GetSegment(i);
+		if (p.p_type == PT_LOAD) {
+			Memory::Protection protection;
+			const uint32_t flags = p.p_flags & (PF_R | PF_W | PF_X);
 
-	segment->offset = currentImageOffset;
-	segment->address = p.p_vaddr = segmentAddress;
-	segment->size = alignedSize;
+			if (flags == (PF_R | PF_X)) {
+				segment = &program.text;
+				name = ".text";
+				protection = Memory::Protection::ReadExecute;
+			}
+			else if (flags == (PF_R)) {
+				segment = &program.rodata;
+				name = ".rodata";
+				protection = Memory::Protection::Read;
+			}
+			else if (flags == (PF_R | PF_W)) {
+				segment = &program.data;
+				name = ".data";
+				protection = Memory::Protection::ReadWrite;
+			}
+			else {
+				LOG_ERROR(
+					Loader,
+					"Unexpected ELF PT_LOAD segment id %u with flags %X",
+					(unsigned int)i,
+					p.p_flags
+				);
+				return;
+			}
 
-	memcpy(&program.image[currentImageOffset], elfInfo.GetSegmentPointer(i), p.p_filesz);
+			const uint32_t segmentAddress = baseAddress + p.p_vaddr;
+			const uint32_t alignedSize = (p.p_memsz + 0xFFF) & ~0xFFF;
 
-	Memory::MapHostMemory(
-		segment->address,
-		segment->size,
-		&program.image[currentImageOffset],
-		protection
-	);
-	currentImageOffset += alignedSize;
+			segment->offset = currentImageOffset;
+			segment->address = p.p_vaddr = segmentAddress;
+			segment->size = alignedSize;
+
+			memcpy(&program.image[currentImageOffset], elfInfo.GetSegmentPointer(i), p.p_filesz);
+
+			Memory::MapHostMemory(
+				segment->address,
+				segment->size,
+				&program.image[currentImageOffset],
+				protection
+			);
+			currentImageOffset += alignedSize;
+			break;
+		}
+	}
 }
 
-static void ReadVitaImports(ElfInfo& elfInfo, const sce_module_info_raw* mod_inf, Elf32_Segment* segment) {
+static void ReadVitaModuleInfo(ElfInfo& elfInfo, HLE::Program& program) {
     int idx;
+	auto& mod_info = program.mod_info;
     LOG_TRACE(Loader, "Getting module info.");
     if ((idx = uvl_elf_get_module_info(elfInfo.GetHeader(), elfInfo.GetSegments(), &mod_info)) < 0) {
         LOG_TRACE(Loader,"Cannot find module info section.");
@@ -157,10 +166,11 @@ static void ReadVitaImports(ElfInfo& elfInfo, const sce_module_info_raw* mod_inf
 		import = (sce_module_imports_raw*)(((uintptr_t)import) + import->size);
 		numImports++;
 	}
+
+	program.entry = (elfInfo.GetSegment(idx).p_vaddr + mod_info.module_start);
 }
 
-void LoadElf(ElfInfo& elfInfo, HLE::Program& program) {
-	uint32_t currentImageOffset = 0;
+bool LoadVitaElf(ElfInfo& elfInfo, HLE::Program& program) {
 	uint32_t totalImageSize = 0;
 	std::vector<Relocation> relocations;
 
@@ -172,15 +182,10 @@ void LoadElf(ElfInfo& elfInfo, HLE::Program& program) {
 
 	InitializeProgramMemory(BaseAddress, totalImageSize, StackAddress, 0x4000, program);
 	
+	MapProgramSegments(elfInfo, program, BaseAddress);
 	for(size_t i = 0; i < elfInfo.NumSegments(); i++) {
 		auto& p = elfInfo.GetSegment(i);
-		switch (p.p_type) {
-		case PT_LOAD: {
-			MapProgramSegment(elfInfo, program, &elfInfo.GetSegment(i));
-			break;
-		}
-
-		case PT_SCE_RELA: {
+		if (p.p_type == PT_SCE_RELA) {
 			Relocation r = {
 				elfInfo.GetSegment(i).p_offset,
 				elfInfo.GetSegment(i).p_filesz
@@ -189,12 +194,9 @@ void LoadElf(ElfInfo& elfInfo, HLE::Program& program) {
 			relocations.push_back(r);
 			break;
 		}
-		default:
-			LOG_ERROR(Loader, "Invalid segment type [%i]", p.p_type);
-			break;
-		}
 	}
 
+	// Add base address to sections
 	for (size_t i = 0; i < elfInfo.NumSections() ; i++) {
 		auto s = elfInfo.GetSection(i);
 		s.sh_addr += BaseAddress;
@@ -211,11 +213,47 @@ void LoadElf(ElfInfo& elfInfo, HLE::Program& program) {
 	}
 
 	HandleRelocations(elfInfo, relocations);
-
-	sce_module_info_raw mod_info = {};
-	ReadVitaImports(elfInfo, mod_info);
-
-	program.entry = (elfInfo.GetSegment(idx).p_vaddr + mod_info.module_start);
-	memcpy(&program.mod_info, &mod_info, sizeof(sce_module_info_raw));
+	ReadVitaModuleInfo(elfInfo, program);
 }
 
+bool LoadArmElf(ElfInfo& elfInfo, HLE::Program& program) {
+	auto header = elfInfo.GetHeader();
+
+	if (header->e_machine != EM_ARM) {
+		LOG_INFO(Loader, "Not an ARM ELF.");
+		return false;
+	}
+
+	if (header->e_type != ET_EXEC) {
+		LOG_INFO(Loader, "Not a static ARM executable.");
+		return false;
+	}
+
+	uint32_t currentImageOffset = 0;
+	uint32_t totalImageSize = 0;
+	for(size_t i = 0; i < elfInfo.GetHeader()->e_phnum; i++) {
+        auto& p = elfInfo.GetSegment(i);
+        if (p.p_type == PT_LOAD)
+            totalImageSize += (p.p_memsz + 0xFFF) & ~0xFFF; // Do some aligning
+    }
+
+	LOG_INFO(Loader, "Loading vanilla elf file. Total image size: %u", (unsigned int)totalImageSize);
+
+	InitializeProgramMemory(0, totalImageSize, StackAddress, 0x4000, program);
+
+	MapProgramSegments(elfInfo, program, 0);
+
+	// Load the string table first
+	auto stringTable = elfInfo.GetSection(elfInfo.GetHeader()->e_shstrndx);
+	for (size_t i = 0; i < elfInfo.NumSections() ; i++) {
+		if(i == elfInfo.GetHeader()->e_shstrndx)
+			continue;
+		const size_t nameOffset = stringTable.sh_offset + elfInfo.GetSection(i).sh_name;
+		auto name = (const char*)elfInfo.GetBase() + nameOffset;
+		std::cout << "Section:" << name << std::endl;
+	}
+
+	program.entry = elfInfo.GetHeader()->e_entry | 1;
+
+	return true;
+}

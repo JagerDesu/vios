@@ -6,12 +6,12 @@
 #include "Core/HLE/Kernel.hpp"
 #include "Core/Memory.hpp"
 
-struct ILoader {
-virtual bool Load(const uint8_t* buffer, size_t size, HLE::Program& program) = 0;
-};
+/*
+ * - Loads a static ARM ELF with no relocations
+ **/
+bool LoadArmElf(ElfInfo& elfInfo, HLE::Program& program);
 
-struct ElfLoader : public ILoader {
-	bool Load(const uint8_t* buffer, size_t size, HLE::Program& program);
-};
-
-void LoadElf(ElfInfo& elfInfo, HLE::Program& program);
+/*
+ * - Loads a SCE Vita flavored ELF with SCE Relocations
+ **/
+bool LoadVitaElf(ElfInfo& elfInfo, HLE::Program& program);
