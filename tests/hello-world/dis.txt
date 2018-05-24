@@ -4,70 +4,66 @@ bin/hello-world.elf:     file format elf32-littlearm
 
 Disassembly of section .text:
 
-00008000 <display_message>:
-    8000:	b480      	push	{r7}
-    8002:	b085      	sub	sp, #20
-    8004:	af00      	add	r7, sp, #0
-    8006:	6078      	str	r0, [r7, #4]
-    8008:	2300      	movs	r3, #0
-    800a:	f2cf 0310 	movt	r3, #61456	; 0xf010
-    800e:	60fb      	str	r3, [r7, #12]
-    8010:	2300      	movs	r3, #0
-    8012:	60bb      	str	r3, [r7, #8]
-    8014:	e003      	b.n	801e <display_message+0x1e>
-    8016:	687b      	ldr	r3, [r7, #4]
-    8018:	781a      	ldrb	r2, [r3, #0]
-    801a:	68fb      	ldr	r3, [r7, #12]
-    801c:	701a      	strb	r2, [r3, #0]
-    801e:	68bb      	ldr	r3, [r7, #8]
-    8020:	2bfe      	cmp	r3, #254	; 0xfe
-    8022:	d803      	bhi.n	802c <display_message+0x2c>
-    8024:	687b      	ldr	r3, [r7, #4]
-    8026:	781b      	ldrb	r3, [r3, #0]
-    8028:	2b00      	cmp	r3, #0
-    802a:	d1f4      	bne.n	8016 <display_message+0x16>
-    802c:	23ff      	movs	r3, #255	; 0xff
-    802e:	f2cf 0310 	movt	r3, #61456	; 0xf010
-    8032:	2201      	movs	r2, #1
-    8034:	601a      	str	r2, [r3, #0]
-    8036:	bf00      	nop
-    8038:	3714      	adds	r7, #20
-    803a:	46bd      	mov	sp, r7
-    803c:	f85d 7b04 	ldr.w	r7, [sp], #4
-    8040:	4770      	bx	lr
+08000000 <_start>:
+ 8000000:	f8df d004 	ldr.w	sp, [pc, #4]	; 8000008 <_start+0x8>
+ 8000004:	f000 f826 	bl	8000054 <test_entry>
+ 8000008:	20001000 	andcs	r1, r0, r0
 
-00008042 <_start>:
-    8042:	b580      	push	{r7, lr}
-    8044:	af00      	add	r7, sp, #0
-    8046:	f248 0088 	movw	r0, #32904	; 0x8088
-    804a:	f2c0 0000 	movt	r0, #0
-    804e:	f7ff ffd7 	bl	8000 <display_message>
-    8052:	bf00      	nop
-    8054:	bd80      	pop	{r7, pc}
-	...
+0800000c <display_message>:
+ 800000c:	b480      	push	{r7}
+ 800000e:	b085      	sub	sp, #20
+ 8000010:	af00      	add	r7, sp, #0
+ 8000012:	6078      	str	r0, [r7, #4]
+ 8000014:	2300      	movs	r3, #0
+ 8000016:	f2cf 0310 	movt	r3, #61456	; 0xf010
+ 800001a:	60bb      	str	r3, [r7, #8]
+ 800001c:	2300      	movs	r3, #0
+ 800001e:	60fb      	str	r3, [r7, #12]
+ 8000020:	e006      	b.n	8000030 <display_message+0x24>
+ 8000022:	687b      	ldr	r3, [r7, #4]
+ 8000024:	781a      	ldrb	r2, [r3, #0]
+ 8000026:	68bb      	ldr	r3, [r7, #8]
+ 8000028:	701a      	strb	r2, [r3, #0]
+ 800002a:	68fb      	ldr	r3, [r7, #12]
+ 800002c:	3301      	adds	r3, #1
+ 800002e:	60fb      	str	r3, [r7, #12]
+ 8000030:	68fb      	ldr	r3, [r7, #12]
+ 8000032:	2bfe      	cmp	r3, #254	; 0xfe
+ 8000034:	d803      	bhi.n	800003e <display_message+0x32>
+ 8000036:	687b      	ldr	r3, [r7, #4]
+ 8000038:	781b      	ldrb	r3, [r3, #0]
+ 800003a:	2b00      	cmp	r3, #0
+ 800003c:	d1f1      	bne.n	8000022 <display_message+0x16>
+ 800003e:	23ff      	movs	r3, #255	; 0xff
+ 8000040:	f2cf 0310 	movt	r3, #61456	; 0xf010
+ 8000044:	2201      	movs	r2, #1
+ 8000046:	601a      	str	r2, [r3, #0]
+ 8000048:	bf00      	nop
+ 800004a:	3714      	adds	r7, #20
+ 800004c:	46bd      	mov	sp, r7
+ 800004e:	f85d 7b04 	ldr.w	r7, [sp], #4
+ 8000052:	4770      	bx	lr
 
-00008058 <_VectorTable>:
-    8058:	ea000006 	b	8078 <reset_handler>
-    805c:	eafffffe 	b	805c <_VectorTable+0x4>
-    8060:	eafffffe 	b	8060 <_VectorTable+0x8>
-    8064:	eafffffe 	b	8064 <_VectorTable+0xc>
-    8068:	eafffffe 	b	8068 <_VectorTable+0x10>
-    806c:	eafffffe 	b	806c <_VectorTable+0x14>
-    8070:	eafffffe 	b	8070 <_VectorTable+0x18>
-    8074:	eafffffe 	b	8074 <_VectorTable+0x1c>
-
-00008078 <reset_handler>:
-    8078:	e59fd004 	ldr	sp, [pc, #4]	; 8084 <reset_handler+0xc>
-    807c:	fbffffef 	blx	8042 <_start>
-    8080:	eafffffe 	b	8080 <reset_handler+0x8>
-    8084:	00001000 	andeq	r1, r0, r0
+08000054 <test_entry>:
+ 8000054:	b580      	push	{r7, lr}
+ 8000056:	af00      	add	r7, sp, #0
+ 8000058:	f240 0068 	movw	r0, #104	; 0x68
+ 800005c:	f6c0 0000 	movt	r0, #2048	; 0x800
+ 8000060:	f7ff ffd4 	bl	800000c <display_message>
+ 8000064:	bf00      	nop
+ 8000066:	bd80      	pop	{r7, pc}
 
 Disassembly of section .rodata:
 
-00008088 <.LC0>:
-    8088:	6c6c6548 	cfstr64vs	mvdx6, [ip], #-288	; 0xfffffee0
-    808c:	56202c6f 	strtpl	r2, [r0], -pc, ror #24
-    8090:	21736f69 	cmncs	r3, r9, ror #30
+08000068 <.LC0>:
+ 8000068:	6c6c6548 	cfstr64vs	mvdx6, [ip], #-288	; 0xfffffee0
+ 800006c:	56202c6f 	strtpl	r2, [r0], -pc, ror #24
+ 8000070:	21736f69 	cmncs	r3, r9, ror #30
+	...
+
+Disassembly of section .data:
+
+20000000 <__data_start>:
 	...
 
 Disassembly of section .comment:
@@ -119,10 +115,10 @@ Disassembly of section .ARM.attributes:
   18:	06003941 	streq	r3, [r0], -r1, asr #18
   1c:	0841070a 	stmdaeq	r1, {r1, r3, r8, r9, sl}^
   20:	0a020901 	beq	8242c <_stack+0x242c>
-  24:	14041202 	strne	r1, [r4], #-514	; 0xfffffdfe
-  28:	17011501 	strne	r1, [r1, -r1, lsl #10]
-  2c:	1a011803 	bne	46040 <__end__+0x2dfa8>
-  30:	1e011c01 	cdpne	12, 0, cr1, cr1, cr1, {0}
-  34:	2a012206 	bcs	48854 <__end__+0x307bc>
+  24:	12020c05 	andne	r0, r2, #1280	; 0x500
+  28:	15011404 	strne	r1, [r1, #-1028]	; 0xfffffbfc
+  2c:	18031701 	stmdane	r3, {r0, r8, r9, sl, ip}
+  30:	1c011a01 			; <UNDEFINED> instruction: 0x1c011a01
+  34:	2a012201 	bcs	48840 <_stack-0x377c0>
   38:	Address 0x0000000000000038 is out of bounds.
 

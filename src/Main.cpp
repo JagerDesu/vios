@@ -16,7 +16,6 @@
 #include "Core/HLE/SceSysmem.hpp"
 #include "Core/HLE/SceThreadmgr.hpp"
 
-
 static void LoadFile(const std::string& path, std::vector<uint8_t>& data) {
 	std::ifstream f(path, std::ios::binary);
 	f.seekg(0, std::ios::end);
@@ -54,6 +53,19 @@ struct Test {
 	const void* data;
 };
 
+struct TestIoCallback : public Memory::Callback {
+	std::ostream& os;
+	TestIoCallback(std::ostream& os);
+	virtual void Read(void* buffer, uint32_t address, uint32_t size) {
+
+	}
+	virtual void Write(const void* buffer, uint32_t address, uint32_t size) {
+
+	}
+
+	uint8_t buffer[4096];
+};
+
 int main(int argc, char** argv) {
 	std::vector<uint8_t> elfData;
 	Arm::Interface* arm = new Arm::UnicornInterface;
@@ -62,14 +74,17 @@ int main(int argc, char** argv) {
 	Memory::RegisterArm(arm);
 	HLE::g_kernel.Init(arm);
 
-	HLE::RegisterSceSysmem();
-	HLE::RegisterSceThreadmgr();
-
-	LoadFile("tests/hello-world/bin/hello-world.elf", elfData);
+	LoadFile(argv[1], elfData);
 	ElfInfo elfInfo(&elfData[0], elfData.size());
 	LoadArmElf(elfInfo, program);
 
 	uint32_t spc = 0xDEADBEEF;
+
+	// If we are emulating a Vita environment, then load HLE modules
+	if (program.isVita) {
+		HLE::RegisterSceSysmem();
+		HLE::RegisterSceThreadmgr();
+	}
 
 	HLE::g_kernel.LoadProgram(program);
 	
@@ -80,7 +95,7 @@ int main(int argc, char** argv) {
 		// Execute an arbitrarily large number of instructions. No
 		// guarantee that all will execute
 		if (!arm->Execute(1)) {
-			abort();
+			LOG_ERROR(Arm, "Failed to execute ARM code");
 		}
 		arm->HaltExecution();
 		DumpCpu(std::cout, arm);

@@ -8,7 +8,7 @@
 namespace Arm {
 class UnicornInterface : public Interface {
 public:
-	UnicornInterface();
+	UnicornInterface(bool thumb = true);
 	~UnicornInterface();
 	void LoadState(const ThreadState& state);
 	void SaveState(ThreadState& state);

@@ -21,6 +21,8 @@ struct Program {
 	Program();
 	~Program();
 
+	bool isVita;
+
 	uint32_t stackBase;
 	uint32_t imageBase;
 	uint32_t entry;

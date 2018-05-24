@@ -59,12 +59,14 @@ void Kernel::LoadProgram(Program& program) {
 	threadState.r[10] = 0x00000000;
 	threadState.r[11] = 0x00000000;
 	threadState.r[12] = 0x00000000;
-	threadState.sp = program.stackBase + program.stack.size() - 4;
+	threadState.sp = program.stackBase;
 	threadState.lr = 0xDEADBEEF;
 	threadState.pc = program.entry;
 
 	arm->LoadState(threadState);
-	ResolveNids(program);
+
+	if (program.isVita)
+		ResolveNids(program);
 }
 
 
@@ -153,7 +155,9 @@ Arm::Interface* Kernel::GetArm() const {
 Program::Program() :
 	stackBase(0),
 	imageBase(0),
-	entry(0)
+	entry(0),
+	isVita(false),
+	mod_info({})
 {
 
 }

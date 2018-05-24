@@ -10,8 +10,11 @@
 
 #include <unicorn/unicorn.h>
 
-const uint32_t BaseAddress  = 0x08804000;
-const uint32_t StackAddress = 0xC0000000;
+
+struct LoaderAddress {
+static const uint32_t Base  = 0x08804000;
+static const uint32_t Stack = 0xC0000000;
+};
 
 struct Relocation {
 	uint32_t offset;
@@ -118,7 +121,6 @@ static void MapProgramSegments(ElfInfo& elfInfo, HLE::Program& program, uint32_t
 				protection
 			);
 			currentImageOffset += alignedSize;
-			break;
 		}
 	}
 }
@@ -138,7 +140,7 @@ static void ReadVitaModuleInfo(ElfInfo& elfInfo, HLE::Program& program) {
 
 	void* importBegin = &importBuffer[0];
 	void* importEnd = (void*)((uintptr_t)importBegin + importLength);
-	uint32_t importAddress = BaseAddress + elfInfo.GetSegment(idx).p_offset + (uintptr_t)mod_info.import_top;
+	uint32_t importAddress = LoaderAddress::Base + elfInfo.GetSegment(idx).p_offset + (uintptr_t)mod_info.import_top;
 	Memory::Read(importBegin, importAddress, importLength);
 	
     sce_module_imports_raw* import = (sce_module_imports_raw*)importBegin;
@@ -167,6 +169,7 @@ static void ReadVitaModuleInfo(ElfInfo& elfInfo, HLE::Program& program) {
 		numImports++;
 	}
 
+	program.isVita = true;
 	program.entry = (elfInfo.GetSegment(idx).p_vaddr + mod_info.module_start);
 }
 
@@ -180,9 +183,9 @@ bool LoadVitaElf(ElfInfo& elfInfo, HLE::Program& program) {
             totalImageSize += (p.p_memsz + 0xFFF) & ~0xFFF; // Do some aligning
     }
 
-	InitializeProgramMemory(BaseAddress, totalImageSize, StackAddress, 0x4000, program);
+	InitializeProgramMemory(LoaderAddress::Base, totalImageSize, LoaderAddress::Stack, 0x4000, program);
 	
-	MapProgramSegments(elfInfo, program, BaseAddress);
+	MapProgramSegments(elfInfo, program, LoaderAddress::Base);
 	for(size_t i = 0; i < elfInfo.NumSegments(); i++) {
 		auto& p = elfInfo.GetSegment(i);
 		if (p.p_type == PT_SCE_RELA) {
@@ -199,7 +202,7 @@ bool LoadVitaElf(ElfInfo& elfInfo, HLE::Program& program) {
 	// Add base address to sections
 	for (size_t i = 0; i < elfInfo.NumSections() ; i++) {
 		auto s = elfInfo.GetSection(i);
-		s.sh_addr += BaseAddress;
+		s.sh_addr += LoaderAddress::Base;
 	}
 
 	// Load the string table first
@@ -239,7 +242,7 @@ bool LoadArmElf(ElfInfo& elfInfo, HLE::Program& program) {
 
 	LOG_INFO(Loader, "Loading vanilla elf file. Total image size: %u", (unsigned int)totalImageSize);
 
-	InitializeProgramMemory(0, totalImageSize, StackAddress, 0x4000, program);
+	InitializeProgramMemory(0, totalImageSize, LoaderAddress::Stack, 0x4000, program);
 
 	MapProgramSegments(elfInfo, program, 0);
 
@@ -253,7 +256,8 @@ bool LoadArmElf(ElfInfo& elfInfo, HLE::Program& program) {
 		std::cout << "Section:" << name << std::endl;
 	}
 
-	program.entry = elfInfo.GetHeader()->e_entry | 1;
+	program.isVita = false;
+	program.entry = elfInfo.GetHeader()->e_entry;
 
 	return true;
 }

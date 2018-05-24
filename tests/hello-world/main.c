@@ -11,10 +11,11 @@ void display_message(const char* message) {
 	size_t i = 0;
 	while ((i < IO_ADDR_SIZE) && *message) {
 		*b = *message;
+		i++;
 	}
 	IO_REG_READY = 1;
 }
 
-void _start() {
+void test_entry() {
 	display_message("Hello, Vios!");
 }

@@ -3,11 +3,13 @@
 #include <cassert>
 
 namespace Arm {
-UnicornInterface::UnicornInterface() {
+UnicornInterface::UnicornInterface(bool thumb) {
 	uc_err error;
 	uint64_t regval = 0;
 	uint64_t fpexc = 0x40000000;
-	error = uc_open(UC_ARCH_ARM, UC_MODE_THUMB, &engine);
+	
+	auto mode = thumb ? UC_MODE_THUMB : UC_MODE_ARM;
+	error = uc_open(UC_ARCH_ARM, mode, &engine);
 
 	// Enable VFP
 	uc_reg_read(engine, UC_ARM_REG_C1_C0_2, &regval);
@@ -127,7 +129,7 @@ void UnicornInterface::WriteRegister(uint32_t idx, uint32_t value) {
 bool UnicornInterface::Execute(uint32_t numInstructions) {
 	uint32_t pc = ReadRegister(15);
 	uint32_t cpsr = ReadCpsr();
-	uint32_t isThumb = (cpsr >> 4) & (~0xFFFFFFE); // T [thumb] bit is located in bit 5
+	uint32_t isThumb = (cpsr >> 5) & (~(uint32_t)0xFFFFFFE); // T [thumb] bit is located in bit 5
 	uc_err error;
 
 	if (isThumb)
@@ -142,6 +144,7 @@ bool UnicornInterface::Execute(uint32_t numInstructions) {
 		LOG_INFO(Arm, "Break in emulation at 0x%08X. Instr: 0x%08X", pc, instr);
 		return false;
 	}
+	
 	return true;
 }
 
