@@ -13,4 +13,5 @@ OBJS	+= \
 	Core/HLE/Kernel.o \
 	Core/HLE/Module.o \
 	Core/HLE/SceSysmem.o \
-	Core/HLE/SceThreadmgr.o
+	Core/HLE/SceThreadmgr.o \
+	Core/HLE/SceLibKernel.o

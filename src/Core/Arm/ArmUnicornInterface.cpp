@@ -138,9 +138,10 @@ bool UnicornInterface::Execute(uint32_t numInstructions) {
 	error = uc_emu_start(engine, pc, ((uint32_t)1) << 31, 0, numInstructions);
 
 	if (error != UC_ERR_OK) {
-		pc = ReadRegister(15);
+		uint32_t instructionAddress = pc & (~(uint32_t)1);
 		uint32_t instr = 0;
-		Memory::Read32(instr, pc);
+		pc = ReadRegister(15);
+		Memory::Read32(instr, instructionAddress);
 		LOG_INFO(Arm, "Break in emulation at 0x%08X. Instr: 0x%08X", pc, instr);
 		return false;
 	}

@@ -14,25 +14,9 @@ struct FunctionEntry {
 	CallbackFunctionType function;
 };
 
-inline void ReturnValue(Arm::Interface* arm, uint32_t value) {
-	arm->WriteRegister(0, value);
-	arm->WriteRegister(15, arm->ReadRegister(14)); // LDR PC, LR
-}
+void ReturnValue(Arm::Interface* arm, uint32_t value);
 
-inline uint32_t FetchArgument32W(Arm::Interface* arm, size_t num) {
-	uint32_t value;
-	size_t numWords = 0;
-	uint32_t sp = arm->ReadRegister(13);
-	if (numWords < 5) {
-		value = arm->ReadRegister(numWords);
-	}
-	else {
-		sp += sizeof (uint32_t) * (numWords - 5);
-		Memory::Read32(value, sp);
-	}
-	
-	return value;
-}
+uint32_t FetchArgument32W(Arm::Interface* arm, size_t num);
 
 
 /*
@@ -67,6 +51,16 @@ void Bind_I_UUIU(Arm::Interface* arm) {
 		arg[i] = FetchArgument32W(arm, i);
 	ReturnValue(arm, EmulatedFunction(arg[0], arg[1], arg[2], arg[3]));
 }
+
+template <int EmulatedFunction(uint32_t, uint32_t, int32_t, int32_t, uint32_t)>
+void Bind_I_UUIIU(Arm::Interface* arm) {
+	uint32_t arg[5];
+	uint32_t sp = arm->ReadRegister(13);
+	for (size_t i = 0; i < 5; i++)
+		arg[i] = FetchArgument32W(arm, i);
+	ReturnValue(arm, EmulatedFunction(arg[0], arg[1], arg[2], arg[3], arg[4]));
+}
+
 
 template <uint32_t EmulatedFunction(int, int)>
 void Bind_U_II(Arm::Interface* arm) {

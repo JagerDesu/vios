@@ -15,6 +15,7 @@
 
 #include "Core/HLE/SceSysmem.hpp"
 #include "Core/HLE/SceThreadmgr.hpp"
+#include "Core/HLE/SceLibKernel.hpp"
 
 static void LoadFile(const std::string& path, std::vector<uint8_t>& data) {
 	std::ifstream f(path, std::ios::binary);
@@ -66,6 +67,7 @@ struct TestIoCallback : public Memory::Callback {
 	uint8_t buffer[4096];
 };
 
+
 int main(int argc, char** argv) {
 	std::vector<uint8_t> elfData;
 	Arm::Interface* arm = new Arm::UnicornInterface;
@@ -76,7 +78,7 @@ int main(int argc, char** argv) {
 
 	LoadFile(argv[1], elfData);
 	ElfInfo elfInfo(&elfData[0], elfData.size());
-	LoadArmElf(elfInfo, program);
+	LoadVitaElf(elfInfo, program);
 
 	uint32_t spc = 0xDEADBEEF;
 
@@ -84,6 +86,7 @@ int main(int argc, char** argv) {
 	if (program.isVita) {
 		HLE::RegisterSceSysmem();
 		HLE::RegisterSceThreadmgr();
+		HLE::RegisterSceLibKernel();
 	}
 
 	HLE::g_kernel.LoadProgram(program);

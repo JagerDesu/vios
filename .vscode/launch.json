@@ -9,7 +9,7 @@
 			"type": "cppdbg",
 			"request": "launch",
 			"program": "${workspaceFolder}/bin/vios",
-			"args": ["tests/hello-world/bin/hello-world.elf"],
+			"args": ["tests/vitahelloworld/vitahelloworld.velf"],
 			"stopAtEntry": false,
 			"cwd": "${workspaceFolder}",
 			"environment": [],

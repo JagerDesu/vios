@@ -48,6 +48,8 @@ private:
 	Arm::Interface* arm;
 	std::vector<const Module*> hleModules;
 	std::vector<std::pair<uint32_t, CallbackFunctionType>> hleFunctionTable;
+	std::vector<uint32_t> functionPatchBuffer; // Buffer that contains HLE bridge code
+	uint32_t functionPatchOffset;
 
 	void ResolveNids(Program& program);
 };

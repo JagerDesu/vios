@@ -5,11 +5,20 @@ namespace HLE {
 extern Module g_SceSysmem_module;
 Library g_SceThreadmgr_library("SceThreadmgr");
 
+struct SceKernelLwMutexWork {
+	uint64_t data[4];
+};
+
+struct SceKernelLwMutexOptParam {
+	uint32_t size;
+};
+
+/**
+ * * void* sceKernelGetThreadTLSAddr(SceUID thid, int key)
+ */
+
 static uint32_t sceKernelGetThreadTLSAddr(SceUID thid, int key) {
 	return 0;
-}
-SceUID sceKernelCreateLwMutex(uint32_t memory, uint32_t name, int attr, int count, uint32_t opt) {
-	return -1;
 }
 
 void RegisterSceThreadmgr() {

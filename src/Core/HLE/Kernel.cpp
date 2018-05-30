@@ -59,7 +59,7 @@ void Kernel::LoadProgram(Program& program) {
 	threadState.r[10] = 0x00000000;
 	threadState.r[11] = 0x00000000;
 	threadState.r[12] = 0x00000000;
-	threadState.sp = program.stackBase;
+	threadState.sp = program.stackBase + program.stack.size();
 	threadState.lr = 0xDEADBEEF;
 	threadState.pc = program.entry;
 
@@ -75,13 +75,17 @@ void Kernel::RegisterModule(const Module& module) {
 }
 
 void Kernel::ResolveNids(Program& program) {
-	static uint8_t patchedFunctionData[8 * 1024];
 	const auto* mod_info = &program.mod_info;
 	const uint32_t importLength = mod_info->import_end - mod_info->import_top;
 	std::vector<uint8_t> importBuffer(importLength);
 
+	functionPatchBuffer.resize(1024 * 32); // Reserve 32 KB for function patching
+	functionPatchOffset = 0;
+
+	// Copy the import data into a host buffer
 	Memory::Read(&importBuffer[0], mod_info->import_top + program.imageBase, importLength);
 
+	// Read the imports
 	void* importBegin = &importBuffer[0];
 	void* importEnd = (void*)((uintptr_t)importBegin + importLength);
 	sce_module_imports_raw* import = (sce_module_imports_raw*)importBegin;
@@ -89,15 +93,17 @@ void Kernel::ResolveNids(Program& program) {
 	size_t numImports = 0;
 	const uint32_t functionAddressBase = 0xE0000000;
 	uint32_t functionAddress = functionAddressBase;
-	Memory::MapHostMemory(functionAddressBase, sizeof(patchedFunctionData), &patchedFunctionData[0], Memory::Protection::Read);
+	Memory::MapHostMemory(functionAddressBase, functionPatchBuffer.size(), &functionPatchBuffer[0], Memory::Protection::ReadExecute);
 	while (import < importEnd) {
 		char moduleName[256] = {0};
 		std::vector<uint32_t> functionNIDs(import->num_syms_funcs);
 
+		// Get module name
 		if (import->module_name)
 			Memory::Read(moduleName, import->module_name, 256); // Very very bad!!!
 		moduleName[255] = 0;
 
+		// Read NID table
 		if (import->func_nid_table) {
 			for (size_t i = 0; i < functionNIDs.size(); i++) {
 				Memory::Read32(functionNIDs[i], import->func_nid_table + (i * sizeof(uint32_t)));
@@ -117,16 +123,19 @@ void Kernel::ResolveNids(Program& program) {
 						0x00000000,
 						functionAddress
 					};
+
 					if (!functionEntry)
 						continue;
-					LOG_INFO(HLE, "Found function match \"%s\"", functionEntry->name);
-					std::pair<uint32_t, CallbackFunctionType> entry(functionAddress, functionEntry->function);
-					hleFunctionTable.push_back(entry);
+
+					std::pair<uint32_t, CallbackFunctionType> hleEntry(functionAddress, functionEntry->function);
+
+					hleFunctionTable.push_back(hleEntry);
 					uint32_t entryAddress;
 					
 					Memory::Read32(entryAddress, import->func_entry_table + (sizeof(uint32_t) * i));
 					Memory::Write(patch, entryAddress, sizeof(patch));
-					functionAddress += 12;
+					functionAddress += sizeof(patch);
+					LOG_INFO(HLE, "\"%s\" function resolved", functionEntry->name);
 				}
 			}
 		}
@@ -141,7 +150,7 @@ bool Kernel::HandleFunctionCall(const Arm::ThreadState& threadState, Arm::Thread
 		if (threadState.r[15] == p.first) {
 			p.second(arm);
 			memcpy(&newThreadState, &threadState, sizeof(Arm::ThreadState));
-			newThreadState.r[15] = newThreadState.r[14];
+			newThreadState.r[15] = threadState.r[14];
 			return true;
 		}
 	}
