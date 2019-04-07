@@ -41,15 +41,13 @@ public:
 	bool Init(Arm::Interface* arm);
 	void LoadProgram(Program& program);
 	void RegisterModule(const Module& module);
+	bool ResolveImports(Program& program, const void* importBuffer, size_t size);
 	bool HandleFunctionCall(const Arm::ThreadState& threadState, Arm::ThreadState& newThreadState);
 	Arm::Interface* GetArm() const;
 	
 private:
 	Arm::Interface* arm;
 	std::vector<const Module*> hleModules;
-	std::vector<std::pair<uint32_t, CallbackFunctionType>> hleFunctionTable;
-	std::vector<uint32_t> functionPatchBuffer; // Buffer that contains HLE bridge code
-	uint32_t functionPatchOffset;
 
 	void ResolveNids(Program& program);
 };

@@ -1,6 +1,7 @@
 #include "Core/Loader/ElfLoader.hpp"
 #include "Core/Loader/relocate.h"
 #include "Core/Loader/sce-elf.h"
+#include "Core/Loader/sce-folder.h"
 #include "Core/Memory.hpp"
 #include "Common/Log.hpp"
 #include <vector>
@@ -259,5 +260,9 @@ bool LoadArmElf(ElfInfo& elfInfo, HLE::Program& program) {
 	program.isVita = false;
 	program.entry = elfInfo.GetHeader()->e_entry;
 
+	return true;
+}
+
+bool LoadSelf(std::vector<uint8_t> buffer, HLE::Program& program) {
 	return true;
 }
