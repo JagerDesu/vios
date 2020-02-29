@@ -6,5 +6,6 @@ obj/**/*.d
 tests/**/*.elf
 tests/**/*.o
 tests/**/*.d
+tests/**/dis.txt
 
 bin/vios
