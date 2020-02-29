@@ -1,6 +1,14 @@
 #pragma once
 
+#include "Arm.hpp"
+
 #include <cstdint>
+#include <cstddef>
+#include <thread>
+
+#include "SDL2/SDL_thread.h"
+
+#include <vector>
 
 namespace Arm {
 struct State;
@@ -11,22 +19,23 @@ public:
 		Uninitialized,
 		Running,
 		Disabled,
-		Halted
+		Halted,
+
+		NeedAck,
 	};
 
-	GdbStub();
+	GdbStub(Arm::Interface* arm);
 	~GdbStub();
-
-	inline Status GetStatus() const { return status; }
-	inline void SetStatus(Status status) { this->status = status; }
-
 	bool Init(uint16_t port);
 	void Shutdown();
 
-private:
+	void Run();
+
+	void ConsumePacket(const uint8_t* buffer, size_t size);
+
 	uint8_t ReadByte();
 	void WriteByte(uint8_t c);
-
+	
 	inline void Write(const void* buffer, size_t size) {
 		for (size_t i = 0; i < size; i++)
 			WriteByte(((uint8_t*)buffer)[i]);
@@ -36,10 +45,12 @@ private:
 		for (size_t i = 0; i < size; i++)
 			((uint8_t*)buffer)[i] = ReadByte();
 	}
-	
+
 	int socketHandle;
 	uint16_t port;
 	Status status;
+	Arm::Interface* arm;
+	std::vector<uint8_t> lastPacket;
 };
 
 }

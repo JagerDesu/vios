@@ -1,5 +1,5 @@
 .global _start
-.code 16
+.code 32
 
 .syntax unified
 _start:

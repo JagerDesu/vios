@@ -1,7 +1,6 @@
 #include "Core/Loader/ElfLoader.hpp"
 #include "Core/Loader/relocate.h"
 #include "Core/Loader/sce-elf.h"
-#include "Core/Loader/sce-folder.h"
 #include "Core/Memory.hpp"
 #include "Common/Log.hpp"
 #include <vector>
@@ -218,6 +217,7 @@ bool LoadVitaElf(ElfInfo& elfInfo, HLE::Program& program) {
 
 	HandleRelocations(elfInfo, relocations);
 	ReadVitaModuleInfo(elfInfo, program);
+	return true;
 }
 
 bool LoadArmElf(ElfInfo& elfInfo, HLE::Program& program) {

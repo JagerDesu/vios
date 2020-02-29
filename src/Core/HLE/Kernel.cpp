@@ -6,6 +6,8 @@
 
 #include <iostream>
 
+#include <sys/mman.h>
+
 namespace HLE {
 
 Kernel g_kernel;
@@ -28,10 +30,54 @@ struct FunctionMemoryCallback : public Memory::Callback {
 	}
 };
 
+static void* ReserveHostPages(size_t size, Access access) {
+	int prot = 0;
+
+	if (access == Access::None) {
+		prot = PROT_NONE;
+	}
+
+	else {
+		if ((int)access & (int)Access::Read)
+			prot |= PROT_READ;
+		if ((int)access & (int)Access::Write)
+			prot |= PROT_WRITE;
+		if ((int)access & (int)Access::Execute)
+			prot |= PROT_EXEC;
+	}
+	
+	return mmap(nullptr, size, prot, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+}
+
+static bool SetHostPageAccess(void* address, size_t size, Access access) {
+	int prot = 0;
+
+	if (access == Access::None) {
+		prot = PROT_NONE;
+	}
+
+	else {
+		if ((int)access & (int)Access::Read)
+			prot |= PROT_READ;
+		if ((int)access & (int)Access::Write)
+			prot |= PROT_WRITE;
+		if ((int)access & (int)Access::Execute)
+			prot |= PROT_EXEC;
+	}
+
+	return mmap(address, size, prot, MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED, -1, 0) != nullptr;
+}
+
 Kernel::Kernel() :
 	arm(nullptr)
 {
+	const size_t FourGibi = 0xFFFFFFFF;
 
+
+	memoryBase = (uint8_t*)ReserveHostPages(FourGibi, Access::None);
+	
+	// Set 0x00000000 as inaccessable to catch NULL accesses
+	SetHostPageAccess(memoryBase, 0x1000, Access::None);
 }
 
 Kernel::~Kernel() {
@@ -48,6 +94,10 @@ void Kernel::LoadProgram(Program& program) {
 	Arm::ThreadState threadState = {};
 	arm->SaveState(threadState);
  
+	if (program.stackBase == 0) {
+		LOG_INFO(HLE, "No stack was allocated for this program");
+	}
+
 	threadState.r[0]  = 0x00000000;
 	threadState.r[1]  = 0x00000000;
 	threadState.r[2]  = 0x00000000;
@@ -77,6 +127,7 @@ void Kernel::RegisterModule(const Module& module) {
 }
 
 bool Kernel::ResolveImports(Program& program, const void* importBuffer, size_t size) {
+	#if 0
 	auto importBegin = (const uint8_t*)importBuffer;
 	auto importEnd = importBegin + size;
 
@@ -132,6 +183,8 @@ bool Kernel::ResolveImports(Program& program, const void* importBuffer, size_t s
 	}
 
 	return true;
+	#endif
+	return false;
 }	
 
 void Kernel::ResolveNids(Program& program) {
@@ -146,15 +199,20 @@ void Kernel::ResolveNids(Program& program) {
 }
 
 bool Kernel::HandleFunctionCall(const Arm::ThreadState& threadState, Arm::ThreadState& newThreadState) {
-	for (auto& p : hleFunctionTable) {
-		if (threadState.r[15] == p.first) {
-			p.second(arm);
-			memcpy(&newThreadState, &threadState, sizeof(Arm::ThreadState));
-			newThreadState.r[15] = threadState.r[14];
-			return true;
+	/*for (const HLE::Module* m : hleModules) {
+		for (HLE::& l : m->libraries) {
+			for (auto& f : l.second->functions) {
+				if (threadState.r[15] == f.) {
+					memcpy(&newThreadState, &threadState, sizeof(Arm::ThreadState));
+					newThreadState.r[15] = threadState.r[14];
+					return true;
+				}
+			}
 		}
-	}
-	return false;
+	}4 gib / 4096 kib
+	return false;*/
+	newThreadState = threadState;
+	return true;
 }
 
 Arm::Interface* Kernel::GetArm() const {

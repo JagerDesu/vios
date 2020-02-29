@@ -3,15 +3,25 @@
 #include "Common/Types.hpp"
 #include <string>
 #include <unordered_map>
+#include <vector>
 
 namespace HLE {
 using SceUID = int32_t;
 using Nid = uint32_t;
 typedef void (*CallbackFunctionType)(Arm::Interface* arm);
 
-struct FunctionEntry {
+struct Function {
 	const char* name;
+	uint32_t nid;
 	CallbackFunctionType function;
+};
+
+using FunctionEntry = Function;
+
+struct Variable {
+	uint32_t nid;
+	uint8_t* data;
+	size_t size;
 };
 
 void ReturnValue(Arm::Interface* arm, uint32_t value);
@@ -71,7 +81,28 @@ void Bind_U_II(Arm::Interface* arm) {
 }
 
 #define REGISTER_HLE_FUNC(lib, name, nid, sig) \
-{g_##lib##_library.RegisterFunction(nid, FunctionEntry{#name, Bind_##sig<&name>});}
+//{g_##lib##_library.RegisterFunction(nid, FunctionEntry{#name, Bind_##sig<&name>});}
+
+struct NidTable {
+	struct Nid {
+		uint32_t value;
+	};
+
+	struct Entry {
+		Nid nid;
+		uint32_t address;
+	};
+
+	struct Bucket {
+		uint32_t value;
+		uint32_t next;
+	};
+
+	Entry* entries;
+	Bucket* bucket;
+	size_t size;
+	size_t capacity;
+};
 
 struct Library {
 	inline Library(const char* name) :
@@ -81,29 +112,33 @@ struct Library {
 	}
 
 	inline const FunctionEntry* GetFunction(Nid nid) const {
-		auto it = functions.find(nid);
+		/*auto it = functions.find(nid);
 		if (it == functions.end())
 			return nullptr;
 		return &it->second;
+
+		return nullptr;*/
+		return nullptr;
 	}
 
 	inline const uint32_t* GetVariable(Nid nid) const {
-		auto it = variables.find(nid);
+		/*auto it = variables.find(nid);
 		if (it == variables.end())
 			return nullptr;
-		return &it->second;
+		return &it->second;*/
+		return nullptr;
 	}
 
 	void RegisterFunction(Nid nid, FunctionEntry entry) {
-		functions[nid] = entry;
-	}
-	void RegisterVariable(Nid nid, uint32_t address) {
-		variables[nid] = address;
+		//functions[nid] = entry;
 	}
 
+	void RegisterVariable(Nid nid, uint32_t address) {
+		//variables[nid] = address;
+	}
 	const char* name;
-	std::unordered_map<Nid, FunctionEntry> functions;
-	std::unordered_map<Nid, uint32_t> variables;
+	std::vector<Function> functions;
+	std::vector<Library> libraries;
 };
 
 
@@ -116,18 +151,19 @@ struct Module {
 	}
 
 	inline const Library* GetLibrary(Nid nid) const {
-		auto it = libraries.find(nid);
+		/*auto it = libraries.find(nid);
 		if (it == libraries.end())
 			return nullptr;
-		return it->second;
+		return it->second;*/
+		return nullptr;
 	}
 
 	void RegisterLibrary(Nid nid, const Library& library) {
-		libraries[nid] = &library;
+		//libraries[nid] = &library;
 	}
 
 	const char* name;
 	Nid nid;
-	std::unordered_map<Nid, const Library*> libraries;
+	std::vector<Library> libraries;
 };
 }

@@ -96,6 +96,7 @@ struct ThreadState {
 };
 
 struct Interface {
+~Interface() {}
 virtual void MapHostMemory(uint32_t address, size_t size, void* buffer, Memory::Protection protection) = 0;
 virtual void UnmapHostMemory(uint32_t address, size_t size) = 0;
 virtual void RegisterMemoryCallback(Memory::Callback* callback, uint32_t address, uint32_t size) = 0;

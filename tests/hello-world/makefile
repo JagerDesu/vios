@@ -2,7 +2,7 @@ TOOLCHAIN = arm-none-eabi-
 CC = $(TOOLCHAIN)gcc
 LD = $(TOOLCHAIN)ld
 OBJDUMP = $(TOOLCHAIN)objdump
-CFLAGS = -mcpu=cortex-a9 -mthumb -mfloat-abi=hard -mfpu=neon-vfpv4
+CFLAGS = -mcpu=cortex-a9 -mthumb -mfloat-abi=hard -mfpu=neon-vfpv4 -ffreestanding
 LDFLAGS = -nostdlib -nostartfiles
 
 OBJDIR = obj/
@@ -22,7 +22,7 @@ disassemble:
 	$(OBJDUMP) bin/hello-world.elf --disassemble-all -D > dis.txt
 
 clean:
-	rm $(OBJS) dis.txt
+	rm $(OBJS) $(BIN) dis.txt
 
 obj/%.o: %.c
 	$(CC) $(CFLAGS) -c $< -o $@

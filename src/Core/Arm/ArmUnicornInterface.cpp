@@ -155,6 +155,7 @@ void UnicornInterface::HaltExecution() {
 }
 
 void UnicornInterface::MapHostMemory(uint32_t address, size_t size, void* buffer, Memory::Protection protection) {
+	LOG_INFO(Arm, "Mapping address 0x%08X to 0x%08X with protection 0x%02X", address, (address + (uint32_t)size), (int)protection);
 	uc_err err;
 	uint32_t prot = 0;
 	if (((int)protection & (int)Memory::Protection::Read) == (int)Memory::Protection::Read)

@@ -8,6 +8,7 @@ OBJS	+= \
 	Core/Memory.o \
 	Core/Arm/Arm.o \
 	Core/Arm/ArmUnicornInterface.o \
+	Core/Arm/ArmGdbStub.o \
 	Core/Loader/ElfLoader.o \
 	Core/Loader/relocate.o \
 	Core/HLE/Kernel.o \

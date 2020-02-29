@@ -4,11 +4,13 @@
 #include <cassert>
 #include <memory>
 #include <cstring>
+#include <iostream>
 
 #include "Common/Types.hpp"
 #include "Common/Log.hpp"
 #include "Core/Loader/ElfLoader.hpp"
 #include "Core/Arm/Arm.hpp"
+#include "Core/Arm/ArmGdbStub.hpp"
 #include "Core/Arm/ArmUnicorn.hpp"
 #include "Core/Memory.hpp"
 #include "Core/HLE/Kernel.hpp"
@@ -47,67 +49,141 @@ static void DumpCpu(std::ostream& os, Arm::Interface* arm) {
 	inum++;
 };
 
-struct Test {
-	uint32_t entryPoint;
-	uint32_t result;
-	uint32_t resultSize;
-	const void* data;
-};
+struct DebugIoCallback : public Memory::Callback {
+	DebugIoCallback() :
+		registers({})
+	{
+		registers.ready = 1;
+	}
 
-struct TestIoCallback : public Memory::Callback {
-	std::ostream& os;
-	TestIoCallback(std::ostream& os);
+	struct Registers {
+		uint8_t buffer[0x1000];
+		uint32_t ready;
+		uint8_t pad[0x1000 - 4];
+	};
+
 	virtual void Read(void* buffer, uint32_t address, uint32_t size) {
-
+		abort();
 	}
 	virtual void Write(const void* buffer, uint32_t address, uint32_t size) {
-
+		uint32_t offset = address % sizeof(Registers);
+		
+		memcpy(&registers, (const uint8_t*)buffer + offset, size);
 	}
 
-	uint8_t buffer[4096];
+	void Step() {
+		if (!registers.ready) {
+			LOG_INFO(HLE, "Serial output: %s", (const char*)registers.buffer);
+			memset(registers.buffer, 0, sizeof(registers.buffer));
+			registers.ready = 1;
+		}
+	}
+	Registers registers;
 };
 
+struct SystemParameters {
+	int argc;
+	char** argv;
+};
+
+struct TestSystem {
+public:
+	TestSystem(const SystemParameters& params) {
+		arm = new Arm::UnicornInterface(false);
+
+		Memory::RegisterArm(arm);
+		HLE::g_kernel.Init(arm);
+
+		//stub = new Arm::GdbStub(arm);
+		
+		std::vector<uint8_t> executable;
+		LoadFile(params.argv[2], executable);
+
+		ElfInfo elfInfo(executable.data(), executable.size());
+
+		LoadArmElf(elfInfo, program);
+
+		ioCallback = new DebugIoCallback;
+
+		// Map the "IO Hardware"
+		Memory::MapHostMemory(
+			0xF0100000,
+			sizeof(DebugIoCallback::Registers),
+			&ioCallback->registers,
+			Memory::Protection::ReadWrite
+		);
+
+		program.stackBase = 0x1000;
+
+		HLE::g_kernel.LoadProgram(program);
+
+		//stub->Init(4336);
+	}
+
+	~TestSystem () {
+		delete stub;
+		delete arm;
+	}
+	int RunLoop() {
+		while (1) {
+			Arm::ThreadState threadState = {};
+			Arm::ThreadState newThreadState = {};
+
+			// Execute an arbitrarily large number of instructions. No
+			// guarantee that all will execute
+			if (!arm->Execute(1)) {
+				LOG_ERROR(Arm, "Failed to execute ARM code");
+			}
+			arm->HaltExecution();
+			DumpCpu(std::cout, arm);
+			ioCallback->Step();
+			
+			// Save the thread state. If currently at an HLE address, execute the HLE function
+			arm->SaveState(threadState);
+			if (HLE::g_kernel.HandleFunctionCall(threadState, newThreadState))
+				arm->LoadState(newThreadState);
+			//stub->Run();
+		}
+		return 0;
+	}
+
+	Arm::Interface* arm;
+	Arm::GdbStub* stub;
+	HLE::Program program;
+	DebugIoCallback* ioCallback;
+};
+
+struct EmulatorSystem {
+public:
+	EmulatorSystem(const SystemParameters& params) {
+
+	}
+
+	~EmulatorSystem() {
+
+	}
+
+	int RunLoop() {
+		return 0;
+	}
+
+};
+
+static void ParseArguments(int argc, char** argv) {
+	for (size_t i = 1; i < argc; i++) {
+		
+	}
+}
 
 int main(int argc, char** argv) {
-	std::vector<uint8_t> elfData;
-	Arm::Interface* arm = new Arm::UnicornInterface;
-	HLE::Program program;
+	SystemParameters params;
 
-	Memory::RegisterArm(arm);
-	HLE::g_kernel.Init(arm);
+	params.argc = argc;
+	params.argv = argv;
 
-	LoadFile(argv[1], elfData);
-	ElfInfo elfInfo(&elfData[0], elfData.size());
-	LoadVitaElf(elfInfo, program);
+	TestSystem system(params);
 
-	uint32_t spc = 0xDEADBEEF;
-
-	// If we are emulating a Vita environment, then load HLE modules
-	if (program.isVita) {
-		HLE::RegisterSceSysmem();
-		HLE::RegisterSceThreadmgr();
-		HLE::RegisterSceLibKernel();
-	}
-
-	HLE::g_kernel.LoadProgram(program);
+	system.RunLoop();
 	
-	while (1) {
-		Arm::ThreadState threadState = {};
-		Arm::ThreadState newThreadState = {};
-
-		// Execute an arbitrarily large number of instructions. No
-		// guarantee that all will execute
-		if (!arm->Execute(1)) {
-			LOG_ERROR(Arm, "Failed to execute ARM code");
-		}
-		arm->HaltExecution();
-		DumpCpu(std::cout, arm);
-		
-		// Save the thread state. If currently at an HLE address, execute the HLE function
-		arm->SaveState(threadState);
-		if (HLE::g_kernel.HandleFunctionCall(threadState, newThreadState))
-			arm->LoadState(newThreadState);
-
-	}
 	return 0;
 }

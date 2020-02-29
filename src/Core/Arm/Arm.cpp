@@ -8,7 +8,6 @@
 namespace Arm {
 
 State::State() :
-	r({}),
 	sp(0),
 	lr(0),
 	pc(0),
@@ -16,6 +15,7 @@ State::State() :
 	itblock(false),
 	iterations(0)
 {
+	memset(r, 0, sizeof(r));
 	memset(&cpsr, 0, sizeof(Psr));
 }
 

@@ -1,21 +1,10 @@
 .vscode/ipch*
 
-obj/*.o
-obj/*.d
+obj/**/*.o
+obj/**/*.d
 
-obj/Core/*.o
-obj/Core/*.d
-obj/Core/HLE/*.o
-obj/Core/HLE/*.d
-obj/Core/Arm/*.o
-obj/Core/Arm/*.d
-obj/Core/Loader/*.o
-obj/Core/Loader/*.d
-
-obj/Common/*.o
-obj/Common/*.d
-
-obj/tests/*.o
-obj/tests/*.d
+tests/**/*.elf
+tests/**/*.o
+tests/**/*.d
 
 bin/vios
