@@ -3,7 +3,7 @@ CC = $(TOOLCHAIN)gcc
 LD = $(TOOLCHAIN)ld
 OBJDUMP = $(TOOLCHAIN)objdump
 CFLAGS = -mcpu=cortex-a9 -mthumb -mfloat-abi=hard -mfpu=neon-vfpv4 -ffreestanding
-LDFLAGS = -nostdlib -nostartfiles
+LDFLAGS = -nostdlib 
 
 OBJDIR = obj/
 BINDIR = bin/
